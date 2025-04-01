@@ -2,6 +2,7 @@ import { gql } from "apollo-server-express";
 
 export const typeDefs = gql`
   scalar Upload
+
   type User {
     id: ID!
     email: String!
@@ -14,8 +15,8 @@ export const typeDefs = gql`
   type File {
     id: ID!
     filename: String!
-    size: Int!
-    url: String
+    size: Int
+    path: String!
   }
 
   type Query {
@@ -28,7 +29,7 @@ export const typeDefs = gql`
     updateUser(user: UpdateUserInput!): User
     deleteUser(id: ID!): User
     login(user: LoginInput!): User
-    uploadFile(file: Upload!): File!
+    uploadFile(file: Upload!): File
   }
 
   input CreateUserInput {

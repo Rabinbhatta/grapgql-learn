@@ -8,43 +8,43 @@ import bodyParser from "body-parser";
 import { typeDefs } from "./schemas";
 import { resolvers } from "./resolver";
 
-interface MyContext {
-  token?: String;
-}
-
 const app = express();
 const httpServer = http.createServer(app);
 
-const server = new ApolloServer<MyContext>({
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "https://studio.apollographql.com"],
+    credentials: true,
+  })
+);
+app.use(express.json());
+app.use(bodyParser.json());
+
+const server = new ApolloServer({
   typeDefs,
   resolvers,
+  csrfPrevention: false,
   plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
 });
 
-// app.use(express.json());
-
 async function startServer() {
   await server.start();
-
+  const graphqlUploadExpress = await import(
+    "graphql-upload/graphqlUploadExpress.mjs"
+  );
+  app.use(
+    graphqlUploadExpress.default({ maxFileSize: 10000000, maxFiles: 10 })
+  );
   app.use(
     "/graphql",
-    cors<cors.CorsRequest>(),
-    bodyParser.json(),
-
     expressMiddleware(server, {
       context: async ({ req }) => ({ token: req.headers.token }),
     })
   );
 
-  // Replace:
-  // const { graphqlUploadExpress } = require('graphql-upload');
-
-  // With:
-
-  await new Promise<void>((resolve) =>
-    httpServer.listen({ port: 4000 }, resolve)
-  );
-  console.log(`🚀 Server ready at http://localhost:4000/graphql`);
+  httpServer.listen(4000, () => {
+    console.log(`🚀 Server ready at http://localhost:4000/graphql`);
+  });
 }
 
-startServer().catch((err) => console.error(err));
+startServer().catch(console.error);

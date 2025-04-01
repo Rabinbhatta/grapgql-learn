@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
-import { createWriteStream, WriteStream } from "fs";
+import cloudinary from "../cloudinary"; // Assuming cloudinary is configured properly
+import fs from "fs";
 
 const prisma = new PrismaClient();
 
@@ -8,6 +9,10 @@ export const resolvers = {
   Query: {
     user: (_: any, { id }: any) =>
       prisma.user.findUnique({ where: { id: id } }),
+    files: async () => {
+      // Fetch all uploaded files from the database
+      return await prisma.file.findMany();
+    },
   },
   Mutation: {
     createUser: async (_: any, args: any) => {
@@ -59,40 +64,49 @@ export const resolvers = {
           throw new Error("Invalid password");
         }
       }
-
       return user;
     },
-    uploadFile: async (_: any, { file }: any) => {
-      const { createReadStream, filename, mimetype } = await file;
-
-      const filePath = `./uploads/${filename}`;
+    uploadFile: async (_: any, file: any) => {
+      const { createReadStream, filename, mimetype, encoding } = await file
+        .file[0].file;
       const stream = createReadStream();
 
-      // Calculate size while saving to disk
-      let size = 0;
-      const out = createWriteStream(filePath);
+      // Return a promise to handle asynchronous behavior properly
+      return new Promise((resolve, reject) => {
+        // Upload the file to Cloudinary
+        const uploadStream: any = cloudinary.uploader.upload_stream(
+          { resource_type: "auto" },
+          async (error, result: any) => {
+            if (error) {
+              console.error("Error uploading file to Cloudinary:", error);
+              return reject(new Error("File upload failed"));
+            }
 
-      stream.on("data", (chunk: any) => {
-        size += chunk.length; // Accumulate size
-        out.write(chunk);
+            // Cloudinary provides the file URL
+            const fileUrl = result.secure_url;
+
+            // Save the file information to the database
+            try {
+              const fileData = await prisma.file.create({
+                data: {
+                  filename: filename,
+                  path: fileUrl, // Store the Cloudinary URL in the database
+                  mimetype: mimetype, // Store mimetype if needed
+                },
+              });
+
+              // Return the saved file data
+              resolve(fileData);
+            } catch (dbError) {
+              console.error("Error saving file to database:", dbError);
+              reject(new Error("Failed to save file information to database"));
+            }
+          }
+        );
+
+        // Pipe the file stream to Cloudinary
+        stream.pipe(uploadStream);
       });
-
-      finished(out);
-
-      // Save metadata to PostgreSQL
-      await prisma.file.create({
-        data: {
-          filename,
-          mimetype,
-          size, // Store calculated size
-          path: filePath,
-        },
-      });
-
-      return filePath; // Return the file path or URL as needed
     },
   },
 };
-function finished(out: WriteStream) {
-  throw new Error("Function not implemented.");
-}

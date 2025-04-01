@@ -21,8 +21,8 @@ model File{
   id String @id @default(cuid())
   filename String
   path String
-  mimetype String
-  size Int
+  mimetype String?
+  size Int?
   createdAt DateTime @default(now())
 }
 
