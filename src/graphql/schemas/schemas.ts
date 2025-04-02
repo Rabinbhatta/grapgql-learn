@@ -7,9 +7,16 @@ export const typeDefs = gql`
     id: ID!
     email: String!
     name: String!
-    password: String!
+    isVerified: Boolean
     createdAt: String!
     updatedAt: String!
+  }
+
+  type ApiResponse {
+    success: Boolean!
+    message: String!
+    statusCode: Int!
+    token: String
   }
 
   type File {
@@ -25,10 +32,10 @@ export const typeDefs = gql`
   }
 
   type Mutation {
-    createUser(user: CreateUserInput!): User
+    createUser(user: CreateUserInput!): ApiResponse!
     updateUser(user: UpdateUserInput!): User
     deleteUser(id: ID!): User
-    login(user: LoginInput!): User
+    login(user: LoginInput!): ApiResponse!
     uploadFile(file: Upload!): File
   }
 
@@ -36,6 +43,7 @@ export const typeDefs = gql`
     email: String!
     name: String!
     password: String!
+    confirmPassword: String!
   }
 
   input UpdateUserInput {

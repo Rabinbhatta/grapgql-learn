@@ -5,8 +5,8 @@ import express from "express";
 import http from "http";
 import cors from "cors";
 import bodyParser from "body-parser";
-import { typeDefs } from "./schemas";
-import { resolvers } from "./resolver";
+import { typeDefs } from "./graphql/schemas/schemas";
+import { resolvers } from "./graphql/resolver/resolver";
 
 const app = express();
 const httpServer = http.createServer(app);

@@ -1,7 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
-import cloudinary from "../cloudinary"; // Assuming cloudinary is configured properly
+import cloudinary from "../../../cloudinary"; // Assuming cloudinary is configured properly
 import fs from "fs";
+import { User } from "../types/type";
+import { userService } from "../../services/userServices";
 
 const prisma = new PrismaClient();
 
@@ -15,17 +17,13 @@ export const resolvers = {
     },
   },
   Mutation: {
-    createUser: async (_: any, args: any) => {
-      const { email, name, password } = args.user;
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const newUser = await prisma.user.create({
-        data: {
-          email: email,
-          name: name,
-          password: hashedPassword,
-        },
-      });
-      return newUser;
+    createUser: async (_: any, { user }: { user: User }) => {
+      try {
+        const response = await userService.createUser(user);
+        return response;
+      } catch (error: any) {
+        throw new Error("Error creating user: " + error.message);
+      }
     },
     updateUser: async (_: any, args: any) => {
       const { id, email, name } = args.user;
@@ -53,18 +51,12 @@ export const resolvers = {
       return deletedUser;
     },
     login: async (_: any, args: any) => {
-      const { email, password } = args.user;
-      const user = await prisma.user.findUnique({ where: { email: email } });
-      if (!user) {
-        throw new Error("User not found");
+      try {
+        const response = await userService.login(args.user);
+        return response;
+      } catch (error: any) {
+        throw new Error("Error logging in: " + error.message);
       }
-      if (user.password !== null) {
-        const isValidPassword = await bcrypt.compare(password, user.password);
-        if (!isValidPassword) {
-          throw new Error("Invalid password");
-        }
-      }
-      return user;
     },
     uploadFile: async (_: any, file: any) => {
       const { createReadStream, filename, mimetype, encoding } = await file
